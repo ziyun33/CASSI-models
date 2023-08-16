@@ -1,0 +1,1 @@
+python main_ddp.py -m test --model-name unet -cp checkpoints/unet/155.ckpt
