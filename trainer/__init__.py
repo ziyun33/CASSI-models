@@ -24,6 +24,7 @@ class trainer():
 
         if config.amp == "True":
             self.amp = True
+            self.scaler = GradScaler()
         else:
             self.amp = False
 
@@ -37,14 +38,29 @@ class trainer():
                 mea, mask, gt = mea.to(rank), mask.to(rank), gt.to(rank)
 
             self.optimizer.zero_grad()
-            output, sp_mask = self.model(mea, mask)
-            loss = self.loss_fn(output, sp_mask, gt)
-            loss_list.append(loss.item())
-            psnr_list.append(psnr_(output, gt, data_range=1.0).item())
-            ssim_list.append(ssim_(output, gt, data_range=1.0).item())
-            loss.backward()
-            grad_norm = nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1)
-            self.optimizer.step()
+            if self.amp is True:
+                with autocast():
+                    output = self.model(mea, mask)
+                    loss = self.loss_fn(output, gt)
+                self.scaler.scale(loss).backward()
+                self.scaler.unscale_(self.optimizer)
+                grad_norm = nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1)
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+
+                loss_list.append(loss.item())
+                psnr_list.append(psnr_(output, gt, data_range=1.0).item())
+                ssim_list.append(ssim_(output, gt.to(torch.float16), data_range=1.0).item())
+            else:
+                output = self.model(mea, mask)
+                loss = self.loss_fn(output, gt)
+                loss.backward()
+                grad_norm = nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1)
+                self.optimizer.step()
+
+                loss_list.append(loss.item())
+                psnr_list.append(psnr_(output, gt, data_range=1.0).item())
+                ssim_list.append(ssim_(output, gt, data_range=1.0).item())
 
         self.scheduler.step()
 
@@ -85,7 +101,7 @@ class trainer():
         for mea, mask, gt in tqdm(self.dataloader):
             mea, mask, gt = mea.to(self.config.device), mask.to(self.config.device), gt.to(self.config.device)
             with torch.no_grad():
-                output, _ = self.model(mea, mask)
+                output = self.model(mea, mask)
                 psnr_list.append(psnr_(output, gt, data_range=1.0).item())
                 ssim_list.append(ssim_(output, gt, data_range=1.0).item())
                 sam_list.append(sam_(output, gt).item()*180/np.pi)

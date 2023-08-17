@@ -72,7 +72,7 @@ parser.add_argument('--patience', type=int, default=120,
                         help='patience. default=20')
 parser.add_argument('--seed', type=int, default=2023,
                         help='random seed to use. default=2023')
-parser.add_argument('--amp', type=str, default="True",
+parser.add_argument('--amp', type=str, default="False",
                         help="auto mix precision")
 
 # about tqdm

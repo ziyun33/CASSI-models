@@ -1,1 +1,1 @@
-python main_ddp.py -m test --model-name cst-s -cp checkpoints/cst-s/9.ckpt
+python main_ddp.py -m test --model-name mst-s -cp checkpoints/mst-s/151.ckpt
