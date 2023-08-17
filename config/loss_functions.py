@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torchmetrics.functional.image import structural_similarity_index_measure as ssim_
 
 
@@ -20,4 +21,14 @@ class MSE_SSIM(nn.Module):
         self.data_range = data_range
 
     def forward(self, pred, gt)-> torch.Tensor:
-        return self.alpha * nn.functional.mse_loss(pred, gt) + self.beta * (1 - ssim_(pred, gt, data_range=self.data_range))
+        return self.alpha * F.mse_loss(pred, gt) + self.beta * (1 - ssim_(pred, gt, data_range=self.data_range))
+    
+class MSE_Sparsity(nn.Module):
+    def __init__(self, Lambda=2) -> None:
+        super().__init__()
+        self.Lambda = Lambda
+
+    def forward(self, pred, mask, gt):
+        mseloss = F.mse_loss(pred, gt)
+        sparsityloss = F.mse_loss(mask, torch.mean(torch.abs(pred - gt), dim=1, keepdim=True))
+        return mseloss + self.Lambda * sparsityloss

@@ -16,7 +16,6 @@ class HSIDataset_simu(Dataset):
         # HSIs
         hsi_list = os.listdir(hsi_path)
         self.hsi_list_size = len(hsi_list)
-        # self.hsi_set = np.zeros((((opt.origin_data_size, opt.origin_data_size, opt.channels, self.hsi_list_size))))
         self.hsi_set = []
         for i in range(self.hsi_list_size):
             print(f'loading scene {i}')

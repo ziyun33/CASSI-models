@@ -58,7 +58,7 @@ class SALSH(LSH):
         projection = vecs @ self.alpha
         projection_shift = projection + self.beta
         projection_rescale = projection_shift / self.r
-        return projection_rescale.permute(2, 0, 1)
+        return projection_rescale.permute(2, 0, 1).contiguous()
 
 def _no_grad_trunc_normal_(tensor, mean, std, a, b):
     def norm_cdf(x):
@@ -170,8 +170,8 @@ class FeedForward(nn.Module):
         x: [b,h,w,c]
         return out: [b,h,w,c]
         """
-        out = self.net(x.permute(0, 3, 1, 2))
-        return out.permute(0, 2, 3, 1)
+        out = self.net(x.permute(0, 3, 1, 2).contiguous())
+        return out.permute(0, 2, 3, 1).contiguous()
 
 class SAH_MSA(nn.Module):
     def __init__(self, heads=4, n_rounds=2, channels=64, patch_size=144,
@@ -203,7 +203,7 @@ class SAH_MSA(nn.Module):
         query = self.to_q(input)
         key = self.to_k(input)
         value = self.to_v(input)
-        input_hash = input.view(B, N, self.heads, C_inp//self.heads)
+        input_hash = input.view(B, N, self.heads, C_inp//self.heads).contiguous()
         x_hash = rearrange(input_hash, 'b t h e -> (b h) t e')
         bs, x_seqlen, dim = x_hash.shape
         with torch.no_grad():
@@ -215,9 +215,9 @@ class SAH_MSA(nn.Module):
         del Xs
 
         C = query.shape[-1]
-        query = query.view(B, N, self.heads, C // self.heads)
-        key = key.view(B, N, self.heads, C // self.heads)
-        value = value.view(B, N, self.heads, C // self.heads)
+        query = query.view(B, N, self.heads, C // self.heads).contiguous()
+        key = key.view(B, N, self.heads, C // self.heads).contiguous()
+        value = value.view(B, N, self.heads, C // self.heads).contiguous()
 
         query = rearrange(query, 'b t h e -> (b h) t e')   # [bs, q_seqlen,c]
         key = rearrange(key, 'b t h e -> (b h) t e')
@@ -235,7 +235,7 @@ class SAH_MSA(nn.Module):
         s_keys = key.reshape(-1, dim).index_select(0, x_flat).reshape(-1, self.k_attn_size, dim)
         s_values = value.reshape(-1, v_dim).index_select(0, x_flat).reshape(-1, self.k_attn_size, v_dim)
 
-        inner = s_queries @ s_keys.transpose(2, 1)
+        inner = s_queries @ s_keys.transpose(2, 1).contiguous()
         norm_factor = 1
         inner = inner / norm_factor
 
@@ -311,12 +311,12 @@ class SAHAB(nn.Module):
             x_select = batch_gather(x, mask_select, 1)  # [b,nh*nw//2,hh*ww*c]
             x_select = x_select.reshape(b*N//2,-1,c)
             x_select = self.attn(x_select)+x_select
-            x_select = x_select.view(b,N//2,-1)
+            x_select = x_select.view(b,N//2,-1).contiguous()
             x = batch_scatter(x.clone(), x_select, 1, mask_select)
         else:
-            x = x.view(b*N,-1,c)
+            x = x.view(b*N,-1,c).contiguous()
             x = self.attn(x) + x
-            x = x.view(b, N, -1)
+            x = x.view(b, N, -1).contiguous()
         x = rearrange(x, 'b (nh nw) (hh ww c) -> b (nh hh) (nw ww) c', nh=h//(w_size[0] * 2), hh=w_size[0] * 2, ww=w_size[1] * 2)
 
         if self.shift_size > 0:
@@ -350,11 +350,11 @@ class SAHABs(nn.Module):
         mask: [b,1,h,w]
         return x: [b,c,h,w]
         """
-        x = x.permute(0, 2, 3, 1)
+        x = x.permute(0, 2, 3, 1).contiguous()
         mask = mask.squeeze(1)
         for block in self.blocks:
             x = block(x, mask)
-        x = x.permute(0, 3, 1, 2)
+        x = x.permute(0, 3, 1, 2).contiguous()
         return x
 
 class ASPPConv(nn.Sequential):
@@ -540,7 +540,7 @@ class CST(nn.Module):
         """
         nC, step = 28, 2
         bs, row, col = y.shape
-        x = torch.zeros(bs, nC, row, row).cuda().float()
+        x = torch.zeros(bs, nC, row, row).to(y.device)
         for i in range(nC):
             x[:, i, :, :] = y[:, :, step * i:step * i + col - (nC - 1) * step]
         x = self.fution(x)
@@ -551,7 +551,7 @@ class CST(nn.Module):
         x: [b,h,w]
         return out:[b,c,h,w]
         """
-
+        b, h, w = x.shape
         x = self.initial_x(x)
 
         # Feature Extraction

@@ -17,14 +17,21 @@ def train_ddp(rank, world_size):
     ddp_setup(rank, world_size)
     set_seed(opts.seed + rank)
 
-    # model, loss, optimizer, scheduler, dataloader
+    # model
     model = model_generator(opts.model_name, opts.shift_step)
     model = model.to(rank)
     ddp_model = DDP(model, device_ids=[rank])
-    loss = nn.MSELoss().to(rank)
-    # loss = MSE_SSIM(alpha=1.0, beta=0.01).to(rank)
+
+    # loss
+    loss = get_loss(opts.loss_fn).to(rank)
+
+    # optimizer
     optimizer = torch.optim.Adam(ddp_model.parameters(), opts.lr)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=opts.step, gamma=1-opts.wd)
+
+    # scheduler
+    scheduler = get_scheduler(optimizer, name=opts.scheduler)
+    
+    # dataloader
     train_loader = get_dataloader(HSIDataset_simu, opts.train_data_root, opts.mask_path, opts.train_data_num, train_tfm, opts)
 
     # initialize trainer
@@ -34,10 +41,6 @@ def train_ddp(rank, world_size):
     if opts.checkpoint is not None:
         trainer_ddp.load_checkpoint(rank)
 
-    # eva FLOPS, PARAMS
-    # if rank == 0:
-    #     trainer_ddp.eva_FLOPs_Params(rank)
-
     # training
     trainer_ddp.train_n_epoch(opts.n_epochs, rank)
 
@@ -46,7 +49,7 @@ def train_ddp(rank, world_size):
 
 def test():
     model = model_generator(opts.model_name)
-    model = model.to("cuda")
+    model = model.to(opts.device)
     test_loader = get_dataloader_test(HSIDataset_test, opts.test_data_root, opts.mask_path, opts)
     tester= trainer(model=model, dataloader=test_loader, loss_fn=None, optimizer=None, scheduler=None, config=opts)
     tester.load_checkpoint()

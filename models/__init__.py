@@ -1,5 +1,4 @@
 import torch
-from .VAE import VAE
 from .Unet import Unet, conv_fusion
 from .ViT import ViT
 from .TSA_Net import TSA_Net
@@ -16,9 +15,40 @@ sys.path.append('..')
 from config import *
 
 def model_generator(name, shift_step=2):
-    if name == "vae":
-        return VAE()
+    # End-to-End
     if name == "unet":
         return Unet(ch=opts.channels, step=shift_step, fusion=conv_fusion)
-    if name == "mst-s":
+    elif name == 'tsa_net':
+        model = TSA_Net()
+    elif name == 'birnat':
+        model = BIRNAT()
+    elif name == "mst-s":
         return MST(dim=28, stage=2, num_blocks=[2, 2, 2])
+    elif name == 'mst_m':
+        model = MST(dim=28, stage=2, num_blocks=[2, 4, 4])
+    elif name == 'mst_l':
+        model = MST(dim=28, stage=2, num_blocks=[4, 7, 5])
+    elif name == 'mst_plus_plus':
+        model = MST_Plus_Plus(in_channels=28, out_channels=28, n_feat=28, stage=3)
+    elif name == "cst-s":
+        return CST(num_blocks=[1, 1, 2], sparse=True)
+    elif name == 'cst_m':
+        model = CST(num_blocks=[2, 2, 2], sparse=True)
+    elif name == 'cst_l':
+        model = CST(num_blocks=[2, 4, 6], sparse=True)
+    elif name == 'cst_l_plus':
+        model = CST(num_blocks=[2, 4, 6], sparse=False)
+
+    # Deep Unfloding
+    elif name == 'gap_net':
+        model = GAP_net()
+    elif name == 'admm_net':
+        model = ADMM_net()
+    elif 'dauhst' in name:
+        num_iterations = int(name.split('_')[1][0])
+        model = DAUHST(num_iterations=num_iterations)
+
+    else:
+        raise Exception(f'Method {name} is not defined !!!!')
+
+    return model

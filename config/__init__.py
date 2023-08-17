@@ -4,10 +4,7 @@ import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 from torchvision.transforms.functional import rotate
-
-# from .models import *
-# from .data import *
-
+from .loss_functions import *
 
 parser = argparse.ArgumentParser(
         description='config')
@@ -27,8 +24,6 @@ parser.add_argument('--train-data-num', type=int,
                         default=2000, help='size of dataset')
 parser.add_argument('--valid-data-num', type=int,
                         default=1000, help='size of dataset')
-parser.add_argument('--origin-data-size', type=int,
-                        default=1024, help='size of dataset')
 parser.add_argument('--channels', type=int,
                         default=28, help='channels of HSI')
 parser.add_argument('--mea-type', type=str,
@@ -53,12 +48,16 @@ parser.add_argument('--save-path', '-sp', type=str,
                         default='checkpoints', help='path to save checkpoints')
 
 # configs about device
-parser.add_argument('--device', type=str,
-                        default='cuda', help='training device')
 parser.add_argument('--gpu-ids', '-gi', type=str, 
                         default='7,8', help='gpu ids')
+parser.add_argument('--device', type=str,
+                        default='cuda', help='training device')
 
 # configs about training
+parser.add_argument('--loss-fn', type=str,
+                        default="mse", help="loss function")
+parser.add_argument('--scheduler', type=str, 
+                        default="MultiStepLR", help="scheduler")
 parser.add_argument('--n-epochs', type=int,
                         default=100, help='epochs of training')
 parser.add_argument('--batch-size', '-b', type=int,
@@ -99,3 +98,21 @@ train_tfm = transforms.Compose([
 test_tfm = transforms.Compose([
     transforms.ToTensor()
 ])
+
+def get_loss(name="mse"):
+    if name == "mse":
+        return nn.MSELoss()
+    elif name == "mse_ssim":
+        return MSE_SSIM()
+    elif name == "mse_sparsity":
+        return MSE_Sparsity()
+    else:
+        raise Exception(f"{name} not implemented!")
+    
+def get_scheduler(optimizer, name="MultiStepLR"):
+    if name == 'MultiStepLR':
+        return torch.optim.lr_scheduler.StepLR(optimizer, step_size=opts.step, gamma=1-opts.wd)
+    elif opts.scheduler == 'CosineAnnealingLR':
+        return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, opts.n_epochs, eta_min=1e-6)
+    else:
+        raise Exception("No scheduler")

@@ -1,0 +1,1 @@
+nohup python -u main_ddp.py -m train --model-name cst-s -gi '8,9' --train-data-num 5000 --loss-fn mse_sparsity --scheduler CosineAnnealingLR --lr 0.0008 -b 5 --n-epochs 500 >log/train/cst-s/cst-s-0817.log 2>&1 &

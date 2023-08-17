@@ -37,8 +37,8 @@ class trainer():
                 mea, mask, gt = mea.to(rank), mask.to(rank), gt.to(rank)
 
             self.optimizer.zero_grad()
-            output = self.model(mea, mask)
-            loss = self.loss_fn(output, gt)
+            output, sp_mask = self.model(mea, mask)
+            loss = self.loss_fn(output, sp_mask, gt)
             loss_list.append(loss.item())
             psnr_list.append(psnr_(output, gt, data_range=1.0).item())
             ssim_list.append(ssim_(output, gt, data_range=1.0).item())
@@ -56,7 +56,7 @@ class trainer():
             if rank is not None:
                 mea, mask, gt = mea.to(rank), mask.to(rank), gt.to(rank)
             else:
-                mea, mask, gt = mea.to("cuda"), mask.to("cuda"), gt.to("cuda")
+                mea, mask, gt = mea.to(self.config.device), mask.to(self.config.device), gt.to(self.config.device)
             with torch.no_grad():
                 output = self.model(mea, mask)
                 loss = self.loss_fn(output, gt)
@@ -81,12 +81,11 @@ class trainer():
 
     def test(self):
         self.model.eval()
-        ssimloss = SSIMLoss()
         psnr_list, ssim_list, sam_list = [], [], []
         for mea, mask, gt in tqdm(self.dataloader):
-            mea, mask, gt = mea.to("cuda"), mask.to("cuda"), gt.to("cuda")
+            mea, mask, gt = mea.to(self.config.device), mask.to(self.config.device), gt.to(self.config.device)
             with torch.no_grad():
-                output = self.model(mea, mask)
+                output, _ = self.model(mea, mask)
                 psnr_list.append(psnr_(output, gt, data_range=1.0).item())
                 ssim_list.append(ssim_(output, gt, data_range=1.0).item())
                 sam_list.append(sam_(output, gt).item()*180/np.pi)
@@ -125,7 +124,7 @@ class trainer():
             if rank is not None:
                 mea, mask = mea.to(rank), mask.to(rank)
             else:
-                mea, mask = mea.to("cuda"), mask.to("cuda")
+                mea, mask = mea.to(self.config.device), mask.to(self.config.device)
 
             # print(mea.shape, mask.shape)
             flops = FlopCountAnalysis(self.model, (mea, mask))
