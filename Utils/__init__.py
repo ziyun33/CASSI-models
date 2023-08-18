@@ -35,7 +35,10 @@ def load_multigpu_paras(model_state_dict):
 
     new_state_dict = OrderedDict()
     for k, v in model_state_dict.items():
-        name = k[7:]
+        if(int(torch.__version__[0]) >= 2):
+            name = k[17:]
+        else:
+            name = k[7:]
         new_state_dict[name] = v
     
     return new_state_dict

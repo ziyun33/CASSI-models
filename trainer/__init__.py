@@ -35,7 +35,7 @@ class trainer():
             if rank is not None:
                 mea, mask, gt = mea.to(rank), mask.to(rank), gt.to(rank)
             else:
-                mea, mask, gt = mea.to(rank), mask.to(rank), gt.to(rank)
+                mea, mask, gt = mea.to(self.config.device), mask.to(self.config.device), gt.to(self.config.device)
 
             self.optimizer.zero_grad()
             if self.amp is True:
@@ -50,7 +50,7 @@ class trainer():
 
                 loss_list.append(loss.item())
                 psnr_list.append(psnr_(output, gt, data_range=1.0).item())
-                ssim_list.append(ssim_(output, gt.to(torch.float16), data_range=1.0).item())
+                ssim_list.append(ssim_(output, gt.to(output.dtype), data_range=1.0).item())
             else:
                 output = self.model(mea, mask)
                 loss = self.loss_fn(output, gt)
@@ -132,7 +132,7 @@ class trainer():
             self.start_epoch = checkpoint["epoch"]
         else:
             checkpoint = torch.load(self.config.checkpoint)
-            self.model.load_state_dict(load_multigpu_paras(checkpoint["model_state_dict"]), strict=False)
+            self.model.load_state_dict(load_multigpu_paras(checkpoint["model_state_dict"]))
 
     def eva_FLOPs_Params(self, rank=None):
 
