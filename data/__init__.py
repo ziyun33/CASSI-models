@@ -18,7 +18,7 @@ class HSIDataset_simu(Dataset):
         self.hsi_list_size = len(hsi_list)
         self.hsi_set = []
         for i in range(self.hsi_list_size):
-            print(f'loading scene {i}')
+            # print(f'loading scene {i}')
             filename = hsi_list[i]
             path1 = os.path.join(hsi_path) + filename
             hsi = sio.loadmat(path1)
@@ -120,7 +120,7 @@ class HSIDataset_test(Dataset):
         self.hsi_list_size = len(hsi_list)
         self.hsi_set = np.zeros((((opt.mask_size, opt.mask_size, opt.channels, self.hsi_list_size))))
         for i in range(self.hsi_list_size):
-            print(f'loading scene {i}')
+            # print(f'loading scene {i}')
             filename = hsi_list[i]
             path1 = os.path.join(hsi_path) + filename
             hsi = sio.loadmat(path1)
@@ -190,7 +190,7 @@ class HSIDataset_test(Dataset):
 def get_dataloader(hsidataset, data_path, mask_path, data_num, tfm, opts):
     dataset = hsidataset(data_path, mask_path, data_num, tfm, opts)
     sampler = torch.utils.data.distributed.DistributedSampler(dataset)
-    loader = DataLoader(dataset, batch_size=opts.batch_size, num_workers=torch.cuda.device_count(), sampler=sampler)
+    loader = DataLoader(dataset, batch_size=opts.batch_size, num_workers=torch.cuda.device_count(), sampler=sampler, pin_memory=True)
 
     return loader
 

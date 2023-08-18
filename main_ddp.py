@@ -13,6 +13,7 @@ from Utils import *
 from trainer import *
 
 def train_ddp(rank, world_size):
+    t1 = time.time()
     print(f"Running basic DDP example on rank {rank}.")
     ddp_setup(rank, world_size)
     set_seed(opts.seed + rank)
@@ -21,6 +22,8 @@ def train_ddp(rank, world_size):
     model = model_generator(opts.model_name, opts.shift_step)
     model = model.to(rank)
     ddp_model = DDP(model, device_ids=[rank])
+    if(int(torch.__version__[0]) >= 2):
+        ddp_model = torch.compile(ddp_model)
 
     # loss
     loss = get_loss(opts.loss_fn).to(rank)
@@ -35,6 +38,9 @@ def train_ddp(rank, world_size):
     train_loader = get_dataloader(HSIDataset_simu, opts.train_data_root, opts.mask_path, opts.train_data_num, train_tfm, opts)
 
     # initialize trainer
+    t2 = time.time()
+    print(f"Initialization cost {t2-t1} s.")
+    print(f"timestamp : {timestamp()}")
     trainer_ddp = trainer(model=ddp_model, dataloader=train_loader, loss_fn=loss, optimizer=optimizer, scheduler=scheduler, config=opts)
     
     # load checkpoint
