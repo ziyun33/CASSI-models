@@ -1,0 +1,1 @@
+nohup python -u main_ddp.py -m train --model-name vit -gi '3,7' --train-data-num 5000 --lr 0.004 -b 10 --n-epochs 300 --step 50 --wd 0.5 --amp True >log/train/vit/vit-0825.log 2>&1 &

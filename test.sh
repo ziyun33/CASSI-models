@@ -1,1 +1,1 @@
-python main_ddp.py -m test --model-name mst-s -cp checkpoints/mst-s/18.ckpt
+python main_ddp.py -m test --model-name unet -cp checkpoints/unet/200.ckpt

@@ -11,6 +11,7 @@ from torchmetrics.functional.image import spectral_angle_mapper as sam_
 import sys
 sys.path.append("..")
 from Utils import *
+from visualizer import *
 
 class trainer():
     def __init__(self, model, dataloader, loss_fn, optimizer, scheduler, config) -> None:
@@ -98,6 +99,7 @@ class trainer():
     def test(self):
         self.model.eval()
         psnr_list, ssim_list, sam_list = [], [], []
+        i = 1
         for mea, mask, gt in tqdm(self.dataloader):
             mea, mask, gt = mea.to(self.config.device), mask.to(self.config.device), gt.to(self.config.device)
             with torch.no_grad():
@@ -105,6 +107,9 @@ class trainer():
                 psnr_list.append(psnr_(output, gt, data_range=1.0).item())
                 ssim_list.append(ssim_(output, gt, data_range=1.0).item())
                 sam_list.append(sam_(output, gt).item()*180/np.pi)
+            
+            draw_cubes(output.squeeze(0).permute(1,2,0).cpu().numpy(), list(range(430, 710, 10)), f"figs/simu/{self.config.model_name}/scene_{i}.png")
+            i = i + 1
         
         psnr_test, ssim_test, sam_test = sum(psnr_list) / len(psnr_list), sum(ssim_list) / len(ssim_list), sum(sam_list) / len(sam_list)
         for i, (p, ss, s) in enumerate(zip(psnr_list, ssim_list, sam_list)):

@@ -113,26 +113,26 @@ class MS_MSA(nn.Module):
         """
         b, h, w, c = x_in.shape
         x = x_in.reshape(b,h*w,c)
-        q_inp = self.to_q(x)
+        q_inp = self.to_q(x) # b, hw, head*d
         k_inp = self.to_k(x)
         v_inp = self.to_v(x)
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=self.num_heads),
                                 (q_inp, k_inp, v_inp))
         # q: b,heads,hw,c
-        q = q.transpose(-2, -1).contiguous()
+        q = q.transpose(-2, -1).contiguous() # b, heads, d, hw
         k = k.transpose(-2, -1).contiguous()
         v = v.transpose(-2, -1).contiguous()
         q = F.normalize(q, dim=-1, p=2)
         k = F.normalize(k, dim=-1, p=2)
         attn = (k @ q.transpose(-2, -1).contiguous())   # A = K^T*Q
-        attn = attn * self.rescale
+        attn = attn * self.rescale # b, heads, d, d
         attn = attn.softmax(dim=-1)
         x = attn @ v   # b,heads,d,hw
-        x = x.permute(0, 3, 1, 2).contiguous()    # Transpose
-        x = x.reshape(b, h * w, self.num_heads * self.dim_head)
-        out_c = self.proj(x).view(b, h, w, c).contiguous()
+        x = x.permute(0, 3, 1, 2).contiguous()    # Transpose b, hw, heads, d
+        x = x.reshape(b, h * w, self.num_heads * self.dim_head) # b, hw, heads*d
+        out_c = self.proj(x).view(b, h, w, c).contiguous() # b, hw, c -> b, h, w, c
         out_p = self.pos_emb(v_inp.reshape(b,h,w,c).permute(0, 3, 1, 2).contiguous()).permute(0, 2, 3, 1).contiguous()
-        out = out_c + out_p
+        out = out_c + out_p # b, h, w, c
 
         return out
 

@@ -1,1 +1,1 @@
-nohup python -u main_ddp.py -m train --model-name unet -gi '8,9' --train-data-num 2000 --lr 0.001 -b 16 --n-epochs 200 --step 25 --wd 0.5 --amp True >log/train/unet/unet-0818.log 2>&1 &
+nohup python -u main_ddp.py -m train --model-name unet -gi '3,4' --train-data-num 2000 --lr 0.002 -b 16 --n-epochs 300  --loss-fn mse --step 25 --wd 0.5 --amp True >log/train/unet/unet-convfusion+bn+pconv+updown.log 2>&1 &
