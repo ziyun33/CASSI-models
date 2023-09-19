@@ -7,7 +7,7 @@ def A(x,Phi):
     return y
 
 def At(y,Phi):
-    temp = torch.unsqueeze(y, 1).repeat(1,Phi.shape[1],1,1)
+    temp = torch.unsqueeze(y, dim=1).repeat(1,Phi.shape[1],1,1)
     x = temp*Phi
     return x
 

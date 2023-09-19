@@ -115,75 +115,32 @@ class DoubleConv(nn.Module):
 
 class GAP_net(nn.Module):
 
-    def __init__(self):
+    def __init__(self, stage=9, ch=28, step=2):
         super(GAP_net, self).__init__()
 
-        self.unet1 = Unet(28, 28)
-        self.unet2 = Unet(28, 28)
-        self.unet3 = Unet(28, 28)
-        self.unet4 = Unet(28, 28)
-        self.unet5 = Unet(28, 28)
-        self.unet6 = Unet(28, 28)
-        self.unet7 = Unet(28, 28)
-        self.unet8 = Unet(28, 28)
-        self.unet9 = Unet(28, 28)
+        self.stage = stage
+        self.ch = ch
+        self.step = step
+        self.denoisers = nn.ModuleList([])
+        for i in range(stage):
+            self.denoisers.append(Unet(ch, ch))
 
     def forward(self, y, input_mask=None):
+        B, H, W = y.shape
         if input_mask==None:
-            Phi = torch.rand((1,28,256,310)).cuda()
-            Phi_s = torch.rand((1, 256, 310)).cuda()
+            Phi = torch.rand((B, self.ch, H, W)).to(y.device)
+            Phi_s = torch.rand((B, H, W)).to(y.device)
         else:
             Phi, Phi_s = input_mask
+
         x_list = []
         x = At(y, Phi)  # v0=H^T y
-        ### 1-3
-        yb = A(x, Phi)
-        x = x + At(torch.div(y - yb, Phi_s), Phi)
-        x = shift_back_3d(x)
-        x = self.unet1(x)
-        x = shift_3d(x)
-        yb = A(x, Phi)
-        x = x + At(torch.div(y - yb, Phi_s), Phi)
-        x = shift_back_3d(x)
-        x = self.unet2(x)
-        x = shift_3d(x)
-        yb = A(x, Phi)
-        x = x + At(torch.div(y - yb, Phi_s), Phi)
-        x = shift_back_3d(x)
-        x = self.unet3(x)
-        x = shift_3d(x)
-        ### 4-6
-        yb = A(x, Phi)
-        x = x + At(torch.div(y - yb, Phi_s), Phi)
-        x = shift_back_3d(x)
-        x = self.unet4(x)
-        x = shift_3d(x)
-        yb = A(x, Phi)
-        x = x + At(torch.div(y - yb, Phi_s), Phi)
-        x = shift_back_3d(x)
-        x = self.unet5(x)
-        x = shift_3d(x)
-        yb = A(x, Phi)
-        x = x + At(torch.div(y - yb, Phi_s), Phi)
-        x = shift_back_3d(x)
-        x = self.unet6(x)
-        x = shift_3d(x)
-        # ### 7-9
-        yb = A(x, Phi)
-        x = x + At(torch.div(y - yb, Phi_s), Phi)
-        x = shift_back_3d(x)
-        x = self.unet7(x)
-        x = shift_3d(x)
-        x_list.append(x[:, :, :, 0:256])
-        yb = A(x, Phi)
-        x = x + At(torch.div(y - yb, Phi_s), Phi)
-        x = shift_back_3d(x)
-        x = self.unet8(x)
-        x = shift_3d(x)
-        x_list.append(x[:, :, :, 0:256])
-        yb = A(x, Phi)
-        x = x + At(torch.div(y - yb, Phi_s), Phi)
-        x = shift_back_3d(x)
-        x = self.unet9(x)
-        x = shift_3d(x)
-        return x[:, :, :, 0:256]
+
+        for i, denoiser in enumerate(self.denoisers):
+            yb = A(x, Phi)
+            x = x + At(torch.div(y - yb, Phi_s), Phi)
+            x = shift_back_3d(x, self.step)
+            x = denoiser(x)
+            x = shift_3d(x, self.step)
+
+        return x[:, :, :, 0:(W - (self.ch - 1) * self.step)]

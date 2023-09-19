@@ -64,6 +64,8 @@ parser.add_argument('--batch-size', '-b', type=int,
                         default=16, help='training batch size. default=32')         
 parser.add_argument('--lr', type=float, default=1e-4,
                         help='learning rate. default=1e-4.')
+parser.add_argument('--auto-lr', type=bool, default=False,
+                        help='use auto learning rate')
 parser.add_argument('--step', type=int, default=10,
                         help='weight decay step. default=10')
 parser.add_argument('--wd', type=float, default=0.1,

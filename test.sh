@@ -1,1 +1,1 @@
-python main_ddp.py -m test --model-name unet -cp checkpoints/unet/200.ckpt
+python main_ddp.py -m test --model-name unet --mask-type mask -cp checkpoints/unet/300.ckpt --mask-path 'data/masks/mask.mat' --device cuda:9

@@ -1,1 +1,1 @@
-nohup python -u main_ddp.py -m train --model-name unet -gi '3,4' --train-data-num 2000 --lr 0.002 -b 16 --n-epochs 300  --loss-fn mse --step 25 --wd 0.5 --amp True >log/train/unet/unet-convfusion+bn+pconv+updown.log 2>&1 &
+nohup python -u main_ddp.py -m train --model-name unet -gi '5,6' --train-data-num 2000 --mask-type mask --lr 0.001 --auto-lr True -b 8 --n-epochs 300 --loss-fn mse --scheduler CosineAnnealingLR --step 25 --wd 0.5 --amp True >log/train/unet/unet-convfusion+bn+CosAnnealing+autolr.log 2>&1 &

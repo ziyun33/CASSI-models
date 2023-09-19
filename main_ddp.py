@@ -3,6 +3,7 @@ import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
+from prodigyopt import Prodigy
 import os
 import time
 
@@ -29,7 +30,11 @@ def train_ddp(rank, world_size):
     loss = get_loss(opts.loss_fn).to(rank)
 
     # optimizer
-    optimizer = torch.optim.Adam(ddp_model.parameters(), opts.lr)
+    if opts.auto_lr is True:
+        optimizer = Prodigy(ddp_model.parameters(), lr=1.0, weight_decay=0.01, safeguard_warmup=True, use_bias_correction=True)
+        print("using auto-lr")
+    else:
+        optimizer = torch.optim.Adam(ddp_model.parameters(), opts.lr)
 
     # scheduler
     scheduler = get_scheduler(optimizer, name=opts.scheduler)
@@ -64,9 +69,9 @@ def test():
 
 def main():
     print(opts)
-    os.environ['CUDA_VISIBLE_DEVICES'] = opts.gpu_ids
-    n_gpus = torch.cuda.device_count()
     if opts.mode == "train":
+        os.environ['CUDA_VISIBLE_DEVICES'] = opts.gpu_ids
+        n_gpus = torch.cuda.device_count()
         print(n_gpus)
         assert n_gpus >= 2, f"Requires at least 2 GPUs to run, but got {n_gpus}"
         world_size = n_gpus

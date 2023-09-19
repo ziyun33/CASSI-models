@@ -96,6 +96,8 @@ class Unet(nn.Module):
         self.fea_ch = 64
         self.step = step
 
+        self.ini = self.initial_H
+
         self.head = nn.Sequential(
             nn.Conv2d(self.out_ch, self.fea_ch, kernel_size=3, stride=1, padding=1),
             activate
@@ -173,16 +175,55 @@ class Unet(nn.Module):
             fusion_layer = fusion(ch=self.fea_ch)
             self.fusions.insert(0, fusion_layer)
 
-    def initial_x(self, y):
+    def initial_H(self, y, mask=None):
         bs, row, col = y.shape
-        x = torch.zeros(bs, self.out_ch, row, row).to(y.device)
+        x = torch.zeros(bs, self.out_ch, row, col-(self.out_ch-1)*self.step).to(y.device)
         for i in range(self.out_ch):
             x[:, i, :, :] = y[:, :, self.step * i:self.step * i + col - (self.out_ch - 1) * self.step]
 
         return x
+    
+    def initial_HM(self, y, mask):
+        bs, row, col = y.shape
+        x = torch.zeros(bs, self.out_ch, row, col-(self.out_ch-1)*self.step).to(y.device)
+        for i in range(self.out_ch):
+            x[:, i, :, :] = y[:, :, self.step * i:self.step * i + col - (self.out_ch - 1) * self.step]
+
+        return torch.mul(x, mask)
+    
+    def initial_E(self, meas, shift_mask):
+        # A method proposed in BIRNAT to get normalized measurement
+        B, H, W = meas.shape
+        C = self.out_ch
+        step = self.step
+        mask_s = torch.sum(shift_mask, 1) / C * 2
+        nor_meas = torch.div(meas, mask_s)
+        x = torch.unsqueeze(nor_meas, dim=1).expand([B, C, H, W])
+
+        output = torch.zeros(B, C, H, W - (C - 1) * self.step).to(meas.device)
+        for i in range(C):
+            output[:, i, :, :] = x[:, i, :, step * i:step * i + W - (C - 1) * step]
+
+        return output
+    
+    def initial_EPhi(self, meas, shift_mask):
+        # A method proposed in BIRNAT to get normalized measurement
+        B, H, W = meas.shape
+        C = self.out_ch
+        step = self.step
+        mask_s = torch.sum(shift_mask, 1) / C * 2
+        nor_meas = torch.div(meas, mask_s)
+        x = torch.mul(torch.unsqueeze(nor_meas, dim=1).expand([B, C, H, W]), shift_mask)
+
+        output = torch.zeros(B, C, H, W - (C - 1) * self.step).to(meas.device)
+        for i in range(C):
+            output[:, i, :, :] = x[:, i, :, step * i:step * i + W - (C - 1) * step]
+
+        return output
+
 
     def forward(self, x, mask=None):
-        x = self.initial_x(x)
+        x = self.ini(x, mask)
         x1 = self.head(x)
         xs = []
         for layer in self.encoder:
@@ -192,5 +233,6 @@ class Unet(nn.Module):
         for layer, fusion in zip(self.decoder, self.fusions):
             x2 = layer(fusion(xs.pop(), x2))
         x3 = self.tail(x2)
+        # return x3
         out = x + x3
         return out
