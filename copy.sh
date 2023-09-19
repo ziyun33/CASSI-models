@@ -1,1 +1,0 @@
-scp -r hezijun@10.0.1.100:models/data/masks data/masks
