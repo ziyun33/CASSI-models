@@ -18,7 +18,7 @@ from config import *
 def model_generator(name, shift_step=2):
     # End-to-End
     if name == "unet":
-        return Unet(ch=opts.channels, layer_num=5, updown=[1,3], dwconv=[], pconv=[0,1,2,3,4], bn=True, step=shift_step, fusion=conv_fusion, activate=nn.ReLU())
+        return Unet(ch=opts.channels, layer_num=5, updown=[], dwconv=[], pconv=[], bn=True, step=shift_step, fusion=conv_fusion, activate=nn.ReLU())
     elif name == "vit":
         return ViT(GlobalMSA, linear_FFN, blocknum=1, pos_emb=None, heads=8, dim_head=64)
     elif name == 'tsa_net':

@@ -238,6 +238,7 @@ class MST(nn.Module):
         x = torch.zeros(bs, nC, row, row).to(y.device)
         for i in range(nC):
             x[:, i, :, :] = y[:, :, step * i:step * i + col - (nC - 1) * step]
+
         x = self.fution(x)
         return x
 
@@ -269,6 +270,9 @@ class MST(nn.Module):
             fea = LeWinBlcok(fea)
 
         # Mapping
+        out = self.mapping(fea)
+        print(out.max(), out.min(), out.mean())
+        return out
         out = self.mapping(fea) + x
         return out
 
