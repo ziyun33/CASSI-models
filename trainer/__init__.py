@@ -1,3 +1,4 @@
+from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
@@ -12,6 +13,14 @@ import sys
 sys.path.append("..")
 from Utils import *
 from visualizer import *
+
+def mask_to_cuda(mask, device):
+    if mask == None:
+        return None
+    elif type(mask) == tuple or type(mask) == list:
+        return (mask[0].to(device), mask[1].to(device))
+    else:
+        return mask.to(device)
 
 class trainer():
     def __init__(self, model, dataloader, loss_fn, optimizer, scheduler, config) -> None:
@@ -31,12 +40,14 @@ class trainer():
 
     def train_one_epoch(self, rank=None):
         self.model.train()
-        loss_list, psnr_list, ssim_list = [], [], []
+        loss_list, psnr_list, ssim_list, sam_list = [], [], [], []
         for mea, mask, gt in tqdm(self.dataloader, disable=True):
             if rank is not None:
-                mea, mask, gt = mea.to(rank), mask.to(rank), gt.to(rank)
+                mea, gt = mea.to(rank), gt.to(rank)
+                mask = mask_to_cuda(mask, rank)
             else:
-                mea, mask, gt = mea.to(self.config.device), mask.to(self.config.device), gt.to(self.config.device)
+                mea, gt = mea.to(self.config.device), gt.to(self.config.device)
+                mask = mask_to_cuda(mask, self.config.device)
 
             self.optimizer.zero_grad()
             if self.amp is True:
@@ -52,6 +63,7 @@ class trainer():
                 loss_list.append(loss.item())
                 psnr_list.append(psnr_(output, gt, data_range=1.0).item())
                 ssim_list.append(ssim_(output, gt.to(output.dtype), data_range=1.0).item())
+                sam_list.append(sam_(output.to(gt.dtype), gt).item())
             else:
                 output = self.model(mea, mask)
                 loss = self.loss_fn(output, gt)
@@ -62,10 +74,14 @@ class trainer():
                 loss_list.append(loss.item())
                 psnr_list.append(psnr_(output, gt, data_range=1.0).item())
                 ssim_list.append(ssim_(output, gt, data_range=1.0).item())
+                sam_list.append(sam_(output, gt).item())
 
         self.scheduler.step()
 
-        return sum(loss_list) / len(loss_list), sum(psnr_list) / len(psnr_list), sum(ssim_list) / len(ssim_list)
+        return {"loss" : sum(loss_list) / len(loss_list), 
+                "psnr" : sum(psnr_list) / len(psnr_list), 
+                "ssim" : sum(ssim_list) / len(ssim_list), 
+                "sam" : sum(sam_list) / len(sam_list)}
 
     def valid_one_epoch(self, rank=None):
         self.model.eval()
@@ -81,17 +97,20 @@ class trainer():
         return loss.item()
 
     def train_n_epoch(self, N_epochs, rank=None):
+        save_path = "checkpoints" + '/' + self.config.model_name + '/' + self.config.save_path
+        Path(save_path).mkdir(parents=True, exist_ok=True)
+
         for i in range(self.start_epoch, N_epochs):
             # train
-            train_loss, train_psnr, train_ssim = self.train_one_epoch(rank=rank)
+            info_dict = self.train_one_epoch(rank=rank)
             if rank is not None:
                 dist.barrier()
             if rank is None or rank == 0:
-                self.info("train", i+1, train_loss, train_psnr, train_ssim)
+                self.info("train", i+1, info_dict)
 
             # save checkpoint
             if rank is None or rank == 0:
-                save_full_path = self.config.save_path + '/' + self.config.model_name + '/' + str(i+1) + ".ckpt"
+                save_full_path =  save_path + "/" + str(i+1) + ".ckpt"
                 self.save_checkpoint(i+1, save_full_path)
 
             dist.barrier()
@@ -99,16 +118,18 @@ class trainer():
     def test(self):
         self.model.eval()
         psnr_list, ssim_list, sam_list = [], [], []
+        fig_path = f"figs/simu/{self.config.model_name}/{self.config.save_path}"
+        Path(fig_path).mkdir(parents=True, exist_ok=True)
         i = 1
         for mea, mask, gt in tqdm(self.dataloader):
-            mea, mask, gt = mea.to(self.config.device), mask.to(self.config.device), gt.to(self.config.device)
+            mea, mask, gt = mea.to(self.config.device), mask_to_cuda(mask, self.config.device), gt.to(self.config.device)
             with torch.no_grad():
                 output = self.model(mea, mask)
                 psnr_list.append(psnr_(output, gt, data_range=1.0).item())
                 ssim_list.append(ssim_(output, gt, data_range=1.0).item())
                 sam_list.append(sam_(output, gt).item()*180/np.pi)
             
-            draw_cubes(output.squeeze(0).permute(1,2,0).cpu().numpy(), list(range(430, 710, 10)), f"figs/simu/{self.config.model_name}/scene_{i}.png")
+            draw_cubes(output.squeeze(0).permute(1,2,0).cpu().numpy(), list(range(430, 710, 10)), f"{fig_path}/scene_{i}.png")
             i = i + 1
         
         psnr_test, ssim_test, sam_test = sum(psnr_list) / len(psnr_list), sum(ssim_list) / len(ssim_list), sum(sam_list) / len(sam_list)
@@ -116,8 +137,12 @@ class trainer():
             print(f"[ test ] | scene {i+1}: psnr: {p:.4f}, ssim: {ss:.4f}, sam: {s:.4f}")
         print(f"[ test ] | average_psnr = {psnr_test:.4f}, average_ssim = {ssim_test:.4f}, average_sam = {sam_test:.4f}")
 
-    def info(self, title, epoch, loss, psnr=None, ssim=None):
-        print(f"[ {title} | {epoch:03d}/{self.config.n_epochs:03d} ] loss = {loss:.6f}, psnr = {psnr:.4f}, ssim = {ssim:.4f}, timestamp: {timestamp()}")
+    def info(self, title, epoch, info_dict: dict):
+        text = f"[ {title} | {epoch:03d}/{self.config.n_epochs:03d} ]"
+        for key in info_dict.keys():
+            text = text + f" {key} = {info_dict[key]:.6f},"
+        text = text + f" timestamp: {timestamp()}"
+        print(text)
 
     def save_checkpoint(self, epoch, save_path):
         torch.save({
@@ -143,9 +168,9 @@ class trainer():
 
         for mea, mask, _ in self.dataloader:
             if rank is not None:
-                mea, mask = mea.to(rank), mask.to(rank)
+                mea, mask = mea.to(rank), mask_to_cuda(mask, rank)
             else:
-                mea, mask = mea.to(self.config.device), mask.to(self.config.device)
+                mea, mask = mea.to(self.config.device), mask_to_cuda(mask, self.config.device)
 
             # print(mea.shape, mask.shape)
             flops = FlopCountAnalysis(self.model, (mea, mask))

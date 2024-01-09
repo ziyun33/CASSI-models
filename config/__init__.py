@@ -6,6 +6,9 @@ import torchvision.transforms as transforms
 from torchvision.transforms.functional import rotate
 from .loss_functions import *
 
+def str2bool(s: str):
+    return True if s.lower() == "true" else False
+
 parser = argparse.ArgumentParser(
         description='config')
 
@@ -49,7 +52,9 @@ parser.add_argument('--save-path', '-sp', type=str,
 
 # configs about device
 parser.add_argument('--gpu-ids', '-gi', type=str, 
-                        default='7,8', help='gpu ids')
+                        default='0,1', help='gpu ids')
+parser.add_argument('--port', type=str,
+                        default="12345", help="ddp port")
 parser.add_argument('--device', type=str,
                         default='cuda', help='training device')
 
@@ -57,7 +62,7 @@ parser.add_argument('--device', type=str,
 parser.add_argument('--loss-fn', type=str,
                         default="mse", help="loss function")
 parser.add_argument('--scheduler', type=str, 
-                        default="MultiStepLR", help="scheduler")
+                        default="CosineAnnealingLR", help="scheduler")
 parser.add_argument('--n-epochs', type=int,
                         default=100, help='epochs of training')
 parser.add_argument('--batch-size', '-b', type=int,
@@ -72,8 +77,13 @@ parser.add_argument('--patience', type=int, default=120,
                         help='patience. default=20')
 parser.add_argument('--seed', type=int, default=2023,
                         help='random seed to use. default=2023')
-parser.add_argument('--amp', type=str, default="False",
+
+parser.add_argument('--auto-lr', type=str2bool, default="false",
+                        help='use auto learning rate')
+parser.add_argument('--amp', type=str2bool, default="true",
                         help="auto mix precision")
+parser.add_argument('--compile', type=str2bool, default="true",
+                        help="compile model (PyTorch >= 2.0)")
 
 # about tqdm
 bar_disable = True

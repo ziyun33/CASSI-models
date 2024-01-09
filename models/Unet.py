@@ -96,7 +96,7 @@ class Unet(nn.Module):
         self.fea_ch = 64
         self.step = step
 
-        self.ini = self.initial_EPhi
+        self.ini = self.initial_H
 
         self.head = nn.Sequential(
             nn.Conv2d(self.out_ch, self.fea_ch, kernel_size=3, stride=1, padding=1),
@@ -196,7 +196,7 @@ class Unet(nn.Module):
         B, H, W = meas.shape
         C = self.out_ch
         step = self.step
-        mask_s = torch.sum(shift_mask, 1) / C
+        mask_s = torch.sum(shift_mask, 1) / C * 2
         nor_meas = torch.div(meas, mask_s)
         x = torch.unsqueeze(nor_meas, dim=1).expand([B, C, H, W])
 
@@ -211,7 +211,7 @@ class Unet(nn.Module):
         B, H, W = meas.shape
         C = self.out_ch
         step = self.step
-        mask_s = torch.sum(shift_mask, 1) / C
+        mask_s = torch.sum(shift_mask, 1) / C * 2
         nor_meas = torch.div(meas, mask_s)
         x = torch.mul(torch.unsqueeze(nor_meas, dim=1).expand([B, C, H, W]), shift_mask)
 
@@ -233,5 +233,6 @@ class Unet(nn.Module):
         for layer, fusion in zip(self.decoder, self.fusions):
             x2 = layer(fusion(xs.pop(), x2))
         x3 = self.tail(x2)
+        # return x3
         out = x + x3
         return out

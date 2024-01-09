@@ -1,0 +1,1 @@
+nohup python -u main_ddp.py -m train --model-name gap_net -gi '6,7' --train-data-num 4000 --mask-type Phi_PhiPhiT --auto-lr False --lr 0.0002 -b 8 --n-epochs 300 --loss-fn mse --scheduler CosineAnnealingLR -sp test --port 12346 --amp True >log/train/gap_net/gapnet.log 2>&1 &

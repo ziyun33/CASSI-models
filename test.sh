@@ -1,1 +1,1 @@
-python main_ddp.py -m test --model-name mst-s -cp checkpoints/mst-s/300.ckpt
+python main_ddp.py -m test --model-name mst-s --mask-type mask -cp checkpoints/mst-s/300.ckpt -sp test --mask-path 'data/masks/mask.mat' --device cuda:0

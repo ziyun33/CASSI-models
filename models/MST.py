@@ -271,9 +271,8 @@ class MST(nn.Module):
 
         # Mapping
         out = self.mapping(fea)
-        print(out.max(), out.min(), out.mean())
-        return out
         out = self.mapping(fea) + x
+        print(out.max(), out.min(), out.mean())
         return out
 
 

@@ -20,7 +20,9 @@ def model_generator(name, shift_step=2):
     if name == "unet":
         return Unet(ch=opts.channels, layer_num=5, updown=[], dwconv=[], pconv=[], bn=True, step=shift_step, fusion=conv_fusion, activate=nn.ReLU())
     elif name == "vit":
-        return ViT(GlobalMSA, linear_FFN, blocknum=1, pos_emb=None, heads=8, dim_head=64)
+        dim = 128
+        patch_size = (4, 4)
+        return ViT(GlobalMSA, linear_FFN, ToPatchEmb(img_size=(256,256), patch_size=patch_size, ch=28, dim=dim), LinearMapping(patch_size=patch_size, ch=28, dim=dim), blocknum=3, dim=dim, heads=8, dim_head=32, dropout=0.2)
     elif name == 'tsa_net':
         model = TSA_Net()
     elif name == 'birnat':
