@@ -32,7 +32,7 @@ class trainer():
         self.config = config
         self.start_epoch = 0
 
-        if config.amp == "True":
+        if config.amp == True:
             self.amp = True
             self.scaler = GradScaler()
         else:
