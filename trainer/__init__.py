@@ -35,6 +35,7 @@ class trainer():
         if config.amp == True:
             self.amp = True
             self.scaler = GradScaler()
+            print("using amp")
         else:
             self.amp = False
 
@@ -63,7 +64,7 @@ class trainer():
                 loss_list.append(loss.item())
                 psnr_list.append(psnr_(output, gt, data_range=1.0).item())
                 ssim_list.append(ssim_(output, gt.to(output.dtype), data_range=1.0).item())
-                sam_list.append(sam_(output.to(gt.dtype), gt).item())
+                sam_list.append(sam_(output, gt.to(output.dtype)).item() *  180 / np.pi)
             else:
                 output = self.model(mea, mask)
                 loss = self.loss_fn(output, gt)
@@ -74,7 +75,7 @@ class trainer():
                 loss_list.append(loss.item())
                 psnr_list.append(psnr_(output, gt, data_range=1.0).item())
                 ssim_list.append(ssim_(output, gt, data_range=1.0).item())
-                sam_list.append(sam_(output, gt).item())
+                sam_list.append(sam_(output, gt).item() * 180 / np.pi)
 
         self.scheduler.step()
 
@@ -120,6 +121,9 @@ class trainer():
         psnr_list, ssim_list, sam_list = [], [], []
         fig_path = f"figs/simu/{self.config.model_name}/{self.config.save_path}"
         Path(fig_path).mkdir(parents=True, exist_ok=True)
+        with open(f"{fig_path}/test.log", "w") as f:
+            f.write(str(self.config) + "\n")
+
         i = 1
         for mea, mask, gt in tqdm(self.dataloader):
             mea, mask, gt = mea.to(self.config.device), mask_to_cuda(mask, self.config.device), gt.to(self.config.device)
@@ -129,13 +133,22 @@ class trainer():
                 ssim_list.append(ssim_(output, gt, data_range=1.0).item())
                 sam_list.append(sam_(output, gt).item()*180/np.pi)
             
-            draw_cubes(output.squeeze(0).permute(1,2,0).cpu().numpy(), list(range(430, 710, 10)), f"{fig_path}/scene_{i}.png")
+            draw_cubes(output.squeeze(0).permute(1,2,0).cpu().numpy(), list(np.linspace(450, 650, 28)), f"{fig_path}/scene_{i}.png")
+
+            # when using 10 benchmark testing data from KAIST to test 
+            if i == 9:
+                corr_list = draw_line(output.squeeze(0).permute(1,2,0).cpu().numpy(), gt.squeeze(0).permute(1,2,0).cpu().numpy(), list(np.linspace(450, 650, 28)), [[40,155,55,170],[90,155,105,170],[135,155,150,170],[205,155,220,170]], fig_path)
             i = i + 1
         
         psnr_test, ssim_test, sam_test = sum(psnr_list) / len(psnr_list), sum(ssim_list) / len(ssim_list), sum(sam_list) / len(sam_list)
-        for i, (p, ss, s) in enumerate(zip(psnr_list, ssim_list, sam_list)):
-            print(f"[ test ] | scene {i+1}: psnr: {p:.4f}, ssim: {ss:.4f}, sam: {s:.4f}")
-        print(f"[ test ] | average_psnr = {psnr_test:.4f}, average_ssim = {ssim_test:.4f}, average_sam = {sam_test:.4f}")
+        with open(f"{fig_path}/test.log", "a") as f:
+            for i, (p, ss, s) in enumerate(zip(psnr_list, ssim_list, sam_list)):
+                print(f"[ test ] | scene {i+1:02d}: psnr: {p:.4f}, ssim: {ss:.4f}, sam: {s:.4f}")
+                f.write(f"[ test ] | scene {i+1:02d}: psnr: {p:.4f}, ssim: {ss:.4f}, sam: {s:.4f}\n")
+            print(f"[ test ] | average_psnr = {psnr_test:.4f}, average_ssim = {ssim_test:.4f}, average_sam = {sam_test:.4f}")
+            print(f"[ test ] | average_corr = {(sum(corr_list) / len(corr_list)):.4f}")
+            f.write(f"[ test ] | average_psnr = {psnr_test:.4f}, average_ssim = {ssim_test:.4f}, average_sam = {sam_test:.4f}\n")
+            f.write(f"[ test ] | average_corr = {(sum(corr_list) / len(corr_list)):.4f}")
 
     def info(self, title, epoch, info_dict: dict):
         text = f"[ {title} | {epoch:03d}/{self.config.n_epochs:03d} ]"
