@@ -141,6 +141,9 @@ class GAP_net(nn.Module):
             x = x + At(torch.div(y - yb, Phi_s), Phi)
             x = shift_back_3d(x, self.step)
             x = denoiser(x)
-            x = shift_3d(x, self.step)
+            if i == self.stage - 1:
+                break
+            else:
+                x = shift_3d(x, self.step)
 
         return x[:, :, :, 0:(W - (self.ch - 1) * self.step)]
