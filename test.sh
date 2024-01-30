@@ -1,1 +1,1 @@
-python main_ddp.py -m test --model-name mst-s --mask-type mask -cp checkpoints/mst-s/300.ckpt -sp test --mask-path 'data/masks/mask.mat' --device cuda:0
+python main_ddp.py -m test --model-name mst-s --mask-type mask -cp checkpoints/mst-s/fulldata_bs2/300.ckpt -sp noisy/gaussian_4_hsi --mask-path 'data/masks/mask.mat' --device cuda:0

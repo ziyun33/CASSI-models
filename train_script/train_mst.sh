@@ -1,1 +1,1 @@
-nohup python -u main_ddp.py -m train --model-name mst-s -gi '8,9' --train-data-num 5000 --lr 0.0008 -b 5 --n-epochs 300 --step 50 --wd 0.5 --amp True >log/train/mst-s/mst-s-amp-0821.log 2>&1 &
+nohup python -u main_ddp.py -m train --model-name mst-s --train-data-root data/cave_1024_28/ -gi '8,9' --port 12345 --train-data-num 5000 --lr 0.0008 -b 2 --n-epochs 300 --amp True --auto-lr True -sp fulldata_bs2 --compile True --seed 2023 >log/train/mst-s/mst_fulldata_bs2.log 2>&1 &

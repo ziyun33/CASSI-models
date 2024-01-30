@@ -270,9 +270,8 @@ class MST(nn.Module):
             fea = LeWinBlcok(fea)
 
         # Mapping
-        out = self.mapping(fea)
+        # out = self.mapping(fea)
         out = self.mapping(fea) + x
-        print(out.max(), out.min(), out.mean())
         return out
 
 
