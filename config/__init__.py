@@ -100,6 +100,8 @@ class RandomRotation90:
 
 train_tfm = transforms.Compose([
     # transforms.ToTensor(),
+    # transforms.RandomCrop(opts.mask_size),
+    # transforms.RandomResizedCrop(opts.mask_size, antialias=True),
     RandomRotation90(),
     transforms.RandomHorizontalFlip(p=0.5),
     transforms.RandomVerticalFlip(p=0.5),
@@ -112,6 +114,8 @@ test_tfm = transforms.Compose([
 def get_loss(name="mse"):
     if name == "mse":
         return nn.MSELoss()
+    elif name == "rmse":
+        return RMSELoss()
     elif name == "mse_ssim":
         return MSE_SSIM()
     elif name == "mse_sparsity":

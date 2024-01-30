@@ -4,6 +4,13 @@ import torch.nn.functional as F
 from torchmetrics.functional.image import structural_similarity_index_measure as ssim_
 
 
+class RMSELoss(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+    
+    def forward(self, pred, gt):
+        return torch.sqrt(F.mse_loss(pred, gt))
+
 class SSIMLoss(nn.Module):
     def __init__(self, data_range=1.0) -> None:
         super().__init__()
