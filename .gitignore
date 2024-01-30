@@ -4,7 +4,8 @@ test.py
 data/CAVE/
 data/cave_1024_28/
 data/masks/
-data/MNIST/
+data/cave_1to20/
+data/cave_21to30/
 data/test_benchmark/
 data/__pycache__/
 config/__pycache__/
@@ -14,3 +15,4 @@ Utils/__pycache__/
 visualizer/__pycache__/
 figs/*
 copy.sh
+others/
