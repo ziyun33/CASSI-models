@@ -51,12 +51,15 @@ class HSIDataset_simu(Dataset):
 
         self.opt = opt
   
+        self.scale = 1 if opt.mask_type == "Phi_PhiPhiT" else opt.channels / 2
+
     def __len__(self):
         return self.data_num
   
     def __getitem__(self, idx):
         index = random.randint(0, self.hsi_list_size - 1)
         hsi = self.hsi_set[index]
+        # gt = self.tfm(hsi)
         px = random.randint(0, hsi.shape[1] - self.opt.mask_size)
         py = random.randint(0, hsi.shape[2] - self.opt.mask_size)
         hsi = hsi[:, px:px + self.opt.mask_size:1, py:py + self.opt.mask_size:1] # S, H, W
@@ -86,7 +89,7 @@ class HSIDataset_simu(Dataset):
         temp = shift(mask3d * gt, self.opt.shift_step)
         mea = torch.sum(temp, 0)
         if self.opt.mea_type == "Y":
-            return mea / self.opt.channels * 2
+            return mea / self.scale
         elif self.opt.mea_type == "H" or self.opt.mea_type == "HM":
             nC = self.opt.channels
             meas = meas / nC * 2
@@ -142,6 +145,8 @@ class HSIDataset_test(Dataset):
         self.mask3d = self.mask3d.to(torch.float32)
 
         self.opt = opt
+
+        self.scale = 1 if opt.mask_type == "Phi_PhiPhiT" else opt.channels / 2
   
     def __len__(self):
         return self.hsi_list_size
@@ -150,10 +155,16 @@ class HSIDataset_test(Dataset):
         gt = self.hsi_set[:, :, :, idx]
 
         mask = self.init_mask(self.mask3d)
-        mea = self.init_mea(gt, self.mask3d)
+        mea = self.init_mea(self.add_gaussian_noise(gt, sigma=4), self.mask3d)
 
         # measurement, mask, ground_truth
         return mea, mask, gt
+    
+    def add_gaussian_noise(self, img, sigma=5):
+        return img + sigma / 255 * torch.randn_like(img)
+
+    def add_shot_noise(self, img, QE=0.95, bit=11):
+        return torch.binomial(img*(2**bit), QE*torch.ones_like(img)) / (2**bit*QE)
     
     def init_mask(self, mask3d):
         if self.opt.mask_type == "None":
@@ -173,7 +184,7 @@ class HSIDataset_test(Dataset):
         temp = shift(mask3d * gt, self.opt.shift_step)
         mea = torch.sum(temp, 0)
         if self.opt.mea_type == "Y":
-            return mea / self.opt.channels * 2
+            return mea / self.scale
         elif self.opt.mea_type == "H" or self.opt.mea_type == "HM":
             nC = self.opt.channels
             meas = meas / nC * 2
