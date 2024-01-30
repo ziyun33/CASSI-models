@@ -58,26 +58,36 @@ def wavelength_to_rgb(wavelength, gamma=0.8):
     return R, G, B
 
 
-def draw_line(img, wavelength, areas, colors, legends, savedir, title):
+def draw_line(img, ref, wavelength, areas, savedir):
     ch = img.shape[-1]
+    corr_list = []
 
-    fig = plt.figure(figsize=(10, 10))
-    plt.gca().set_prop_cycle(color=colors)
+    for i, area in enumerate(areas):
+        fig = plt.figure(figsize=(10, 10))
 
-    for area, legend in zip(areas, legends):
-        value = []
+        value_pred = []
+        value_gt = []
 
-        for i in range(ch):
-            value.append(np.mean(img[area[1]:area[3], area[0]:area[2], i]))
+        for j in range(ch):
+            value_pred.append(np.mean(img[area[1]:area[3], area[0]:area[2], j]))
+            value_gt.append(np.mean(ref[area[1]:area[3], area[0]:area[2], j]))
+
+        corr = np.corrcoef(np.array(value_pred), np.array(value_gt))
+        corr_list.append(corr[0,1])
     
-        plt.plot(wavelength, np.array(value) / max(value), label=legend)
+        plt.plot(wavelength, np.array(value_pred) / max(value_pred), label="pred", linewidth=4, marker="o", markersize=10)
+        plt.plot(wavelength, np.array(value_gt) / max(value_gt), label="gt", linewidth=4, marker=".", markersize=10)
+        plt.text(x=wavelength[0], y=0.8, s=f"corr={corr[0,1]:.4f}", fontsize=24)
 
-    plt.xlabel('Wavelength (nm)', fontsize=14)
-    plt.ylabel('Itensity', fontsize=14)
-    plt.legend(fontsize=14)
-    plt.savefig(f'{savedir}/{title}_line.png', bbox_inches='tight', pad_inches=0)
-    plt.close(fig)
-
+        plt.xlabel('Wavelength (nm)', fontsize=24)
+        plt.ylabel('Itensity', fontsize=20)
+        plt.xticks(size=20)
+        plt.yticks(size=20)
+        plt.legend(fontsize=24)
+        plt.savefig(f'{savedir}/spectral_line_{i+1}.png', bbox_inches='tight', pad_inches=0)
+        plt.close(fig)
+    
+    return corr_list
 
 def draw_cubes(img, wavelengths, savepath):
     """
@@ -106,7 +116,7 @@ def draw_cubes(img, wavelengths, savepath):
         # img_temp = (img_temp - vmin) / (vmax - vmin)
         
         plt.imshow(img_temp, cmap=cmap, norm="linear")
-        plt.text(10, 30, str(round(wavelengths[i], 1)) + " nm", fontsize=24, color="white", fontweight="bold")
+        plt.text(20, 40, str(round(wavelengths[i], 1)) + " nm", fontsize=28, color="white", fontweight="bold")
         # plt.text(30, 80, str(round(wavelengths[i], 1)) + " nm", fontsize=14, color="white", fontweight="bold")
         plt.axis('off')
 
