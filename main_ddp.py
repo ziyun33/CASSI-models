@@ -12,6 +12,7 @@ from data import HSIDataset_simu, HSIDataset_real, HSIDataset_test, get_dataload
 from config import *
 from Utils import *
 from trainer import *
+from tester import tester
 
 def train_ddp(rank, world_size):
     t1 = time.time()
@@ -62,10 +63,10 @@ def test():
     model = model_generator(opts.model_name)
     model = model.to(opts.device)
     test_loader = get_dataloader_test(HSIDataset_test, opts.test_data_root, opts.mask_path, opts)
-    tester= trainer(model=model, dataloader=test_loader, loss_fn=None, optimizer=None, scheduler=None, config=opts)
-    tester.load_checkpoint()
-    tester.eva_FLOPs_Params()
-    tester.test()
+    tester_= tester(model=model, dataloader=test_loader, config=opts)
+    tester_.load_checkpoint()
+    tester_.eva_FLOPs_Params()
+    tester_.test()
 
 def main():
     print(opts)

@@ -97,25 +97,6 @@ class ADMM_net(nn.Module):
 
     def __init__(self, stage_num=9, ch=28):
         super(ADMM_net, self).__init__()
-        # self.unet1 = Unet(28, 28)
-        # self.unet2 = Unet(28, 28)
-        # self.unet3 = Unet(28, 28)
-        # self.unet4 = Unet(28, 28)
-        # self.unet5 = Unet(28, 28)
-        # self.unet6 = Unet(28, 28)
-        # self.unet7 = Unet(28, 28)
-        # self.unet8 = Unet(28, 28)
-        # self.unet9 = Unet(28, 28)
-
-        # self.gamma1 = torch.nn.Parameter(torch.Tensor([0]))
-        # self.gamma2 = torch.nn.Parameter(torch.Tensor([0]))
-        # self.gamma3 = torch.nn.Parameter(torch.Tensor([0]))
-        # self.gamma4 = torch.nn.Parameter(torch.Tensor([0]))
-        # self.gamma5 = torch.nn.Parameter(torch.Tensor([0]))
-        # self.gamma6 = torch.nn.Parameter(torch.Tensor([0]))
-        # self.gamma7 = torch.nn.Parameter(torch.Tensor([0]))
-        # self.gamma8 = torch.nn.Parameter(torch.Tensor([0]))
-        # self.gamma9 = torch.nn.Parameter(torch.Tensor([0]))
 
         self.stage_num = stage_num
         self.channels = ch
@@ -134,90 +115,18 @@ class ADMM_net(nn.Module):
         x_list = []
         theta = At(y,Phi)
         b = torch.zeros_like(Phi)
-        # ### 1-3
-        # yb = A(theta+b,Phi)
-        # x = theta+b + At(torch.div(y-yb,Phi_s+self.gamma1),Phi)
-        # x1 = x-b
-        # x1 = shift_back_3d(x1)
-        # theta = self.unet1(x1)
-        # theta = shift_3d(theta)
-        # b = b- (x-theta)
-        # x_list.append(theta)
-        # yb = A(theta+b,Phi)
-        # x = theta+b + At(torch.div(y-yb,Phi_s+self.gamma2),Phi)
-        # x1 = x-b
-        # x1 = shift_back_3d(x1)
-        # theta = self.unet2(x1)
-        # theta = shift_3d(theta)
-        # b = b- (x-theta)
-        # x_list.append(theta)
-        # yb = A(theta+b,Phi)
-        # x = theta+b + At(torch.div(y-yb,Phi_s+self.gamma3),Phi)
-        # x1 = x-b
-        # x1 = shift_back_3d(x1)
-        # theta = self.unet3(x1)
-        # theta = shift_3d(theta)
-        # b = b- (x-theta)
-        # x_list.append(theta)
-        # ### 4-6
-        # yb = A(theta+b,Phi)
-        # x = theta+b + At(torch.div(y-yb,Phi_s+self.gamma4),Phi)
-        # x1 = x-b
-        # x1 = shift_back_3d(x1)
-        # theta = self.unet4(x1)
-        # theta = shift_3d(theta)
-        # b = b- (x-theta)
-        # x_list.append(theta)
-        # yb = A(theta+b,Phi)
-        # x = theta+b + At(torch.div(y-yb,Phi_s+self.gamma5),Phi)
-        # x1 = x-b
-        # x1 = shift_back_3d(x1)
-        # theta = self.unet5(x1)
-        # theta = shift_3d(theta)
-        # b = b- (x-theta)
-        # x_list.append(theta)
-        # yb = A(theta+b,Phi)
-        # x = theta+b + At(torch.div(y-yb,Phi_s+self.gamma6),Phi)
-        # x1 = x-b
-        # x1 = shift_back_3d(x1)
-        # theta = self.unet6(x1)
-        # theta = shift_3d(theta)
-        # b = b- (x-theta)
-        # x_list.append(theta)
-        # ### 7-9
-        # yb = A(theta+b,Phi)
-        # x = theta+b + At(torch.div(y-yb,Phi_s+self.gamma7),Phi)
-        # x1 = x-b
-        # x1 = shift_back_3d(x1)
-        # theta = self.unet7(x1)
-        # theta = shift_3d(theta)
-        # b = b- (x-theta)
-        # x_list.append(theta)
-        # yb = A(theta+b,Phi)
-        # x = theta+b + At(torch.div(y-yb,Phi_s+self.gamma8),Phi)
-        # x1 = x-b
-        # x1 = shift_back_3d(x1)
-        # theta = self.unet8(x1)
-        # theta = shift_3d(theta)
-        # b = b- (x-theta)
-        # x_list.append(theta)
-        # yb = A(theta+b,Phi)
-        # x = theta+b + At(torch.div(y-yb,Phi_s+self.gamma9),Phi)
-        # x1 = x-b
-        # x1 = shift_back_3d(x1)
-        # theta = self.unet9(x1)
-        # theta = shift_3d(theta)
 
-        for i in range(self.stage_num):
+        for i, denoiser, gamma in enumerate(zip(self.denoiser_list, self.gamma_list)):
             yb = A(theta+b,Phi)
-            x = theta+b + At(torch.div(y-yb,Phi_s+self.gamma_list[i]),Phi)
+            x = theta+b + At(torch.div(y-yb,Phi_s+gamma),Phi)
             x1 = x-b
             x1 = shift_back_3d(x1)
-            theta = self.denoiser_list[i](x1)
-            theta = shift_3d(theta)
+            theta = denoiser(x1)
             if i == self.stage_num - 1:
                 return theta[:, :, :, 0:256]
-            b = b- (x-theta)
-            x_list.append(theta)
+            else:
+                theta = shift_3d(theta)
+                b = b- (x-theta)
+                # x_list.append(theta)
 
         return theta[:, :, :, 0:256]

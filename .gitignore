@@ -6,13 +6,16 @@ data/cave_1024_28/
 data/masks/
 data/cave_1to20/
 data/cave_21to30/
+data/cave_512_28/
 data/test_benchmark/
 data/__pycache__/
+data/data_aug.py
 config/__pycache__/
 models/__pycache__/
 trainer/__pycache__/
+tester/__pycache__/
 Utils/__pycache__/
 visualizer/__pycache__/
-figs/*
+result/*
 copy.sh
 others/

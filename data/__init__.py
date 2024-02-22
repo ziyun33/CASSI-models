@@ -155,7 +155,7 @@ class HSIDataset_test(Dataset):
         gt = self.hsi_set[:, :, :, idx]
 
         mask = self.init_mask(self.mask3d)
-        mea = self.init_mea(self.add_gaussian_noise(gt, sigma=4), self.mask3d)
+        mea = self.init_mea(gt, self.mask3d)
 
         # measurement, mask, ground_truth
         return mea, mask, gt

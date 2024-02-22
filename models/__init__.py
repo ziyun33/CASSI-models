@@ -46,7 +46,7 @@ def model_generator(name, shift_step=2):
 
     # Deep Unfloding
     elif name == 'gap_net':
-        model = GAP_net()
+        model = GAP_net(stage=3, ch=28, step=2)
     elif name == 'admm_net':
         model = ADMM_net()
     elif 'dauhst' in name:

@@ -85,6 +85,9 @@ parser.add_argument('--amp', type=str2bool, default="true",
 parser.add_argument('--compile', type=str2bool, default="true",
                         help="compile model (PyTorch >= 2.0)")
 
+parser.add_argument('--spectral-test', type=str2bool, default="true",
+                        help="draw spectral curve")
+
 # about tqdm
 bar_disable = True
 
